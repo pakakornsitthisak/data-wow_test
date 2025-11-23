@@ -13,6 +13,7 @@ export interface Reservation {
   id: number;
   userId: string;
   concertId: number;
+  status: 'reserve' | 'cancel';
   createdAt: string;
   updatedAt: string;
 }

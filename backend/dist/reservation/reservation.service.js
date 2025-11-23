@@ -22,11 +22,13 @@ let ReservationService = class ReservationService {
     }
     create(createReservationDto) {
         const concert = this.concertService.findOne(createReservationDto.concertId);
-        const existingReservation = this.reservations.find((r) => r.userId === createReservationDto.userId && r.concertId === createReservationDto.concertId);
+        const existingReservation = this.reservations.find((r) => r.userId === createReservationDto.userId &&
+            r.concertId === createReservationDto.concertId &&
+            r.status === reservation_entity_1.ReservationStatus.RESERVE);
         if (existingReservation) {
             throw new common_1.ConflictException('User already has a reservation for this concert');
         }
-        const reservationCount = this.reservations.filter((r) => r.concertId === createReservationDto.concertId).length;
+        const reservationCount = this.reservations.filter((r) => r.concertId === createReservationDto.concertId && r.status === reservation_entity_1.ReservationStatus.RESERVE).length;
         if (reservationCount >= concert.seat) {
             throw new common_1.BadRequestException('No seats available for this concert');
         }
@@ -53,18 +55,26 @@ let ReservationService = class ReservationService {
         if (reservation.userId !== userId) {
             throw new common_1.BadRequestException('You can only cancel your own reservations');
         }
+        if (reservation.status === reservation_entity_1.ReservationStatus.CANCEL) {
+            throw new common_1.BadRequestException('Reservation is already cancelled');
+        }
         const index = this.reservations.findIndex((r) => r.id === reservationId);
-        this.reservations.splice(index, 1);
+        if (index !== -1) {
+            this.reservations[index].status = reservation_entity_1.ReservationStatus.CANCEL;
+            this.reservations[index].updatedAt = new Date();
+        }
     }
     getAllReservations() {
         return this.reservations;
     }
     getReservationCountByConcertId(concertId) {
-        return this.reservations.filter((r) => r.concertId === concertId).length;
+        return this.reservations.filter((r) => r.concertId === concertId && r.status === reservation_entity_1.ReservationStatus.RESERVE).length;
     }
     getReservationIdsByUserAndConcert(userId, concertId) {
         return this.reservations
-            .filter((r) => r.userId === userId && r.concertId === concertId)
+            .filter((r) => r.userId === userId &&
+            r.concertId === concertId &&
+            r.status === reservation_entity_1.ReservationStatus.RESERVE)
             .map((r) => r.id);
     }
     getReservationsByConcertId(concertId) {

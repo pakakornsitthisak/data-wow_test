@@ -2,11 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
 function Sidebar() {
   const pathname = usePathname();
-  const isAdminMode = pathname.startsWith('/admin');
+  const [isAdminMode, setIsAdminMode] = useState(false);
+
+  useEffect(() => {
+    // Check localStorage for userMode, or fallback to pathname
+    const userMode = localStorage.getItem('userMode') || 'user';
+    const adminByPath = pathname.startsWith('/admin') || pathname === '/history';
+    setIsAdminMode(userMode === 'admin' || adminByPath);
+  }, [pathname]);
 
   const handleSwitchMode = () => {
     const newMode = isAdminMode ? 'user' : 'admin';
@@ -49,37 +57,61 @@ function Sidebar() {
         <ul className="space-y-2 flex-shrink-0">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
-            const Component = item.onClick ? 'button' : Link;
-            const props = item.onClick
-              ? { onClick: item.onClick, type: 'button' as const }
-              : { href: item.href };
             
             return (
               <li key={item.href}>
-                <Component
-                  {...props}
-                  className={`
-                    flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors w-full text-left
-                    ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }
-                  `}
-                >
-                  <div className="w-5 h-5 flex items-center justify-center">
-                    <Image
-                      src={item.icon}
-                      alt={item.label}
-                      width={20}
-                      height={20}
-                      className={`w-5 h-5 ${
-                        isActive ? 'opacity-100' : 'opacity-60'
-                      }`}
-                    />
-                  </div>
-                  <span>{item.label}</span>
-                </Component>
+                {item.onClick ? (
+                  <button
+                    onClick={item.onClick}
+                    type="button"
+                    className={`
+                      flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors w-full text-left
+                      ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }
+                    `}
+                  >
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      <Image
+                        src={item.icon}
+                        alt={item.label}
+                        width={20}
+                        height={20}
+                        className={`w-5 h-5 ${
+                          isActive ? 'opacity-100' : 'opacity-60'
+                        }`}
+                      />
+                    </div>
+                    <span>{item.label}</span>
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`
+                      flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors w-full text-left
+                      ${
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }
+                    `}
+                  >
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      <Image
+                        src={item.icon}
+                        alt={item.label}
+                        width={20}
+                        height={20}
+                        className={`w-5 h-5 ${
+                          isActive ? 'opacity-100' : 'opacity-60'
+                        }`}
+                      />
+                    </div>
+                    <span>{item.label}</span>
+                  </Link>
+                )}
               </li>
             );
           })}

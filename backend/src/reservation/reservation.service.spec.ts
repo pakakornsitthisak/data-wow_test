@@ -3,6 +3,7 @@ import { ReservationService } from './reservation.service';
 import { ConcertService } from '../concert/concert.service';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { CreateReservationDto } from './dto/create-reservation.dto';
+import { ReservationStatus } from './reservation.entity';
 
 describe('ReservationService', () => {
   let service: ReservationService;
@@ -39,6 +40,7 @@ describe('ReservationService', () => {
       expect(reservation).toBeDefined();
       expect(reservation.userId).toBe(createReservationDto.userId);
       expect(reservation.concertId).toBe(createReservationDto.concertId);
+      expect(reservation.status).toBe(ReservationStatus.RESERVE);
       expect(reservation.id).toBeDefined();
     });
 
@@ -113,11 +115,11 @@ describe('ReservationService', () => {
         concertId: concert.id,
       });
 
-      const initialCount = service.findByUserId('user1').length;
+      expect(reservation.status).toBe(ReservationStatus.RESERVE);
       service.cancel('user1', reservation.id);
-      const finalCount = service.findByUserId('user1').length;
-
-      expect(finalCount).toBe(initialCount - 1);
+      
+      const cancelledReservation = service.findOne(reservation.id);
+      expect(cancelledReservation.status).toBe(ReservationStatus.CANCEL);
     });
 
     it('should throw NotFoundException when reservation not found', () => {

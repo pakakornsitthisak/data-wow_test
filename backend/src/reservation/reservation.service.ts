@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { Reservation } from './reservation.entity';
+import { Reservation, ReservationStatus } from './reservation.entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { ConcertService } from '../concert/concert.service';
 
@@ -14,18 +14,21 @@ export class ReservationService {
     // Check if concert exists
     const concert = this.concertService.findOne(createReservationDto.concertId);
 
-    // Check if user already has a reservation for this concert
+    // Check if user already has an active reservation for this concert
     const existingReservation = this.reservations.find(
-      (r) => r.userId === createReservationDto.userId && r.concertId === createReservationDto.concertId,
+      (r) =>
+        r.userId === createReservationDto.userId &&
+        r.concertId === createReservationDto.concertId &&
+        r.status === ReservationStatus.RESERVE,
     );
 
     if (existingReservation) {
       throw new ConflictException('User already has a reservation for this concert');
     }
 
-    // Count existing reservations for this concert
+    // Count existing active reservations for this concert
     const reservationCount = this.reservations.filter(
-      (r) => r.concertId === createReservationDto.concertId,
+      (r) => r.concertId === createReservationDto.concertId && r.status === ReservationStatus.RESERVE,
     ).length;
 
     // Check if seats are available
@@ -65,8 +68,15 @@ export class ReservationService {
       throw new BadRequestException('You can only cancel your own reservations');
     }
 
+    if (reservation.status === ReservationStatus.CANCEL) {
+      throw new BadRequestException('Reservation is already cancelled');
+    }
+
     const index = this.reservations.findIndex((r) => r.id === reservationId);
-    this.reservations.splice(index, 1);
+    if (index !== -1) {
+      this.reservations[index].status = ReservationStatus.CANCEL;
+      this.reservations[index].updatedAt = new Date();
+    }
   }
 
   getAllReservations(): Reservation[] {
@@ -74,12 +84,19 @@ export class ReservationService {
   }
 
   getReservationCountByConcertId(concertId: number): number {
-    return this.reservations.filter((r) => r.concertId === concertId).length;
+    return this.reservations.filter(
+      (r) => r.concertId === concertId && r.status === ReservationStatus.RESERVE,
+    ).length;
   }
 
   getReservationIdsByUserAndConcert(userId: string, concertId: number): number[] {
     return this.reservations
-      .filter((r) => r.userId === userId && r.concertId === concertId)
+      .filter(
+        (r) =>
+          r.userId === userId &&
+          r.concertId === concertId &&
+          r.status === ReservationStatus.RESERVE,
+      )
       .map((r) => r.id);
   }
 
