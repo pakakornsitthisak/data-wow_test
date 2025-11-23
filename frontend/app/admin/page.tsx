@@ -69,13 +69,15 @@ export default function AdminPage() {
   };
 
   const getReservedCount = (concertId: number) => {
-    return reservations.filter((r) => r.concertId === concertId).length;
+    return reservations.filter(
+      (r) => r.concertId === concertId && r.status === 'reserve',
+    ).length;
   };
 
   // Calculate statistics for admin
   const totalSeats = concerts.reduce((sum, concert) => sum + concert.seat, 0);
-  const reserveCount = reservations.length;
-  const cancelCount = 0; // TODO: Track cancelled reservations when implemented
+  const reserveCount = reservations.filter((r) => r.status === 'reserve').length;
+  const cancelCount = reservations.filter((r) => r.status === 'cancel').length;
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
@@ -177,55 +179,13 @@ export default function AdminPage() {
                   concerts.map((concert) => {
                     const reservedCount = getReservedCount(concert.id);
                     return (
-                      <div
+                      <ConcertCard
                         key={concert.id}
-                        className="bg-white rounded-lg border border-gray-200 w-full shadow-sm"
-                      >
-                        {/* Part 1: Concert Name with horizontal line */}
-                        <div className="pt-6">
-                          <div className="px-6">
-                            <h3 className="text-xl font-semibold text-[#1692ec] mb-4">
-                              {concert.name}
-                            </h3>
-                          </div>
-                          <div className="border-b border-gray-200 mx-6"></div>
-                        </div>
-
-                        {/* Part 2: Concert Description */}
-                        <div className="px-6 py-4">
-                          <p className="text-gray-600">{concert.description}</p>
-                        </div>
-
-                        {/* Part 3: Bottom section with icons and delete button */}
-                        <div className="px-6 pb-6 flex justify-between items-center">
-                          {/* Bottom Left: User icon and Total seats icon */}
-                          <div className="flex items-center space-x-2">
-                            <Image
-                              src="/svg/user.svg"
-                              alt="User"
-                              width={20}
-                              height={20}
-                              className="w-5 h-5 opacity-70"
-                            />
-                            <span className="text-gray-700 font-medium">{concert.seat}</span>
-                          </div>
-
-                          {/* Bottom Right: Delete Button */}
-                          <button
-                            onClick={() => openDeleteDialog(concert)}
-                            className="flex items-center space-x-2 bg-[#e84e4e] text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
-                          >
-                            <Image
-                              src="/svg/trash.svg"
-                              alt="Delete"
-                              width={16}
-                              height={16}
-                              className="w-4 h-4"
-                            />
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      </div>
+                        concert={concert}
+                        reservedCount={reservedCount}
+                        onDelete={openDeleteDialog}
+                        isAdmin={true}
+                      />
                     );
                   })
                 )}
