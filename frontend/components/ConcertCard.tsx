@@ -88,7 +88,7 @@ export default function ConcertCard({
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors font-medium ${
               hasReservation
                 ? 'bg-[#e84e4e] text-white hover:bg-red-700'
-                : 'bg-[#01a48b] text-white hover:bg-green-700'
+                : 'bg-[#1692ec] text-white hover:bg-green-700'
             }`}
           >
             <span>{hasReservation ? 'Cancel' : 'Reserve'}</span>

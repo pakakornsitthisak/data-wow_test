@@ -18,22 +18,31 @@ A full-stack application for managing concert ticket reservations, built with Ne
 ## 🎯 Features
 
 ### User Features
-- View all concerts (including sold-out ones)
+- View all concerts in a vertical card layout
 - Reserve one seat per concert (1 user = 1 seat per concert)
-- Cancel reservations
-- View own reservation history
+- Cancel reservations (changes status to 'cancel')
+- View reservation statistics (Total seats, Reserve count, Cancel count)
+- Switch between user and admin mode
 
 ### Admin Features
-- Create new concerts (name, description, total seats)
-- Delete concerts
-- View all user reservations
+- Create new concerts with name, description, and total seats
+- Delete concerts with confirmation dialog
+- View all user reservations in history page
+- View reservation statistics (Total seats, Reserve count, Cancel count)
+- Overview tab: View all concerts with delete functionality
+- Create tab: Form to create new concerts
 
 ### Technical Features
 - Responsive design (mobile, tablet, desktop)
-- Server-side validation
+- Server-side validation using class-validator
 - Client-side error handling and display
-- Comprehensive unit tests
+- Reservation status tracking ('reserve' or 'cancel')
+- Comprehensive unit tests for backend services
 - RESTful API architecture
+- Sidebar navigation with mode switching
+- History page with reservation table
+- Delete confirmation dialogs
+- Statistics dashboard for admin and user views
 
 ## 🛠 Tech Stack
 
@@ -55,30 +64,63 @@ A full-stack application for managing concert ticket reservations, built with Ne
 data-wow_test/
 ├── frontend/                 # Next.js frontend application
 │   ├── app/                 # Next.js app directory
-│   │   ├── page.tsx        # Landing page (user view)
+│   │   ├── page.tsx        # Root page (redirects to /admin or /user)
 │   │   ├── admin/          # Admin dashboard
-│   │   └── layout.tsx      # Root layout
+│   │   │   └── page.tsx    # Admin home page with statistics and concert management
+│   │   ├── user/           # User dashboard
+│   │   │   └── page.tsx    # User home page with concert listings
+│   │   ├── history/        # History page
+│   │   │   └── page.tsx    # Reservation history table (admin view)
+│   │   ├── layout.tsx      # Root layout
+│   │   └── globals.css     # Global styles
 │   ├── components/          # React components
-│   │   ├── ConcertCard.tsx
-│   │   └── ErrorDisplay.tsx
-│   └── lib/                # Utilities and API client
-│       └── api.ts          # API client with types
+│   │   ├── ConcertCard.tsx # Concert card component (used in admin/user views)
+│   │   ├── CreateCard.tsx  # Create concert form component
+│   │   ├── DeleteConfirmationDialog.tsx # Delete confirmation modal
+│   │   ├── ErrorDisplay.tsx # Error message display component
+│   │   └── Sidebar.tsx     # Navigation sidebar component
+│   ├── lib/                # Utilities and API client
+│   │   └── api.ts          # API client with TypeScript types
+│   ├── public/             # Static assets
+│   │   └── svg/            # SVG icons
+│   │       ├── home.svg
+│   │       ├── history.svg
+│   │       ├── switch_to_user.svg
+│   │       ├── log_out.svg
+│   │       ├── user.svg
+│   │       ├── total_of_seats.svg
+│   │       ├── reserve.svg
+│   │       ├── cancel.svg
+│   │       ├── trash.svg
+│   │       └── delete.svg
+│   └── package.json
 ├── backend/                 # NestJS backend application
 │   ├── src/
 │   │   ├── concert/        # Concert module
 │   │   │   ├── concert.controller.ts
 │   │   │   ├── concert.service.ts
+│   │   │   ├── concert.service.spec.ts
 │   │   │   ├── concert.entity.ts
+│   │   │   ├── concert.module.ts
 │   │   │   └── dto/
+│   │   │       ├── create-concert.dto.ts
+│   │   │       └── concert-with-stats.dto.ts
 │   │   ├── reservation/    # Reservation module
 │   │   │   ├── reservation.controller.ts
 │   │   │   ├── reservation.service.ts
+│   │   │   ├── reservation.service.spec.ts
 │   │   │   ├── reservation.entity.ts
+│   │   │   ├── reservation.module.ts
 │   │   │   └── dto/
+│   │   │       ├── create-reservation.dto.ts
+│   │   │       └── cancel-reservation.dto.ts
 │   │   ├── common/         # Shared utilities
-│   │   │   └── filters/    # Exception filters
+│   │   │   └── filters/
+│   │   │       └── http-exception.filter.ts
+│   │   ├── app.module.ts   # Root module
 │   │   └── main.ts         # Application entry point
-│   └── test/               # Unit tests
+│   ├── test/               # Unit tests
+│   └── package.json
 └── README.md
 ```
 
@@ -151,11 +193,24 @@ The backend follows NestJS's modular architecture:
 #### Data Storage
 Currently using in-memory storage (arrays) for simplicity. In production, this would be replaced with a database (PostgreSQL, MongoDB, etc.).
 
+#### Reservation Status System
+Reservations include a `status` field with two possible values:
+- `'reserve'` - Active reservation
+- `'cancel'` - Cancelled reservation (soft delete)
+
+When a user cancels a reservation, the status changes to 'cancel' instead of deleting the record. This allows:
+- History tracking of all reservations
+- Analytics on cancellation rates
+- Audit trails
+- Statistics calculation (reserve count vs cancel count)
+
 #### Key Design Decisions
 - Separation of concerns (controllers, services, entities)
 - DTO validation using class-validator
 - Global exception filter for consistent error responses
 - CORS enabled for frontend communication
+- Reservation status tracking ('reserve' or 'cancel') instead of hard deletion
+- In-memory storage with soft-delete pattern for reservations
 
 ### Frontend Architecture
 
@@ -169,9 +224,13 @@ The frontend follows Next.js 13+ App Router patterns:
 
 #### Key Design Decisions
 - Type-safe API client with TypeScript
-- Component-based architecture
+- Component-based architecture with reusable components
 - Responsive design with Tailwind CSS
 - Client-side state management with React hooks
+- Sidebar navigation with dynamic mode switching (admin/user)
+- Statistics dashboard for both admin and user views
+- Confirmation dialogs for destructive actions
+- Status-based filtering for reservations (reserve/cancel)
 
 ## 📚 API Documentation
 
@@ -234,11 +293,16 @@ Get all reservations. Optionally filter by userId with query parameter: `?userId
     "id": 1,
     "userId": "user1",
     "concertId": 1,
+    "status": "reserve",
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
   }
 ]
 ```
+
+**Status Values:**
+- `"reserve"` - Active reservation
+- `"cancel"` - Cancelled reservation (soft delete)
 
 #### POST /reservations
 Create a new reservation.
@@ -256,12 +320,13 @@ Create a new reservation.
 - `concertId`: Required, integer
 
 **Business Rules:**
-- User can only reserve 1 seat per concert
-- Cannot reserve if concert is sold out
-- Cannot reserve if user already has a reservation for that concert
+- User can only reserve 1 seat per concert (with status 'reserve')
+- Cannot reserve if concert is sold out (all seats are reserved with status 'reserve')
+- Cannot reserve if user already has an active reservation (status 'reserve') for that concert
+- When a reservation is cancelled, its status changes to 'cancel' (soft delete)
 
 #### DELETE /reservations/cancel
-Cancel a reservation.
+Cancel a reservation. This changes the reservation status to 'cancel' instead of deleting it.
 
 **Request Body:**
 ```json
@@ -270,6 +335,18 @@ Cancel a reservation.
   "reservationId": 1
 }
 ```
+
+**Response:**
+```json
+{
+  "message": "Reservation cancelled successfully"
+}
+```
+
+**Behavior:**
+- Changes reservation status from 'reserve' to 'cancel'
+- Updates the `updatedAt` timestamp
+- Reservation record is preserved for history tracking
 
 ### Error Responses
 
@@ -314,11 +391,21 @@ npm run test:cov
 
 The backend includes comprehensive unit tests for:
 - `ConcertService`: Create, read, delete operations
-- `ReservationService`: Create, read, cancel operations with business rule validation
+- `ReservationService`: 
+  - Create reservations with status 'reserve'
+  - Cancel reservations (changes status to 'cancel')
+  - Business rule validation (one reservation per user per concert, seat availability)
+  - Status-based filtering for seat counts
 
 Test files:
 - `backend/src/concert/concert.service.spec.ts`
 - `backend/src/reservation/reservation.service.spec.ts`
+
+All tests pass and cover:
+- Basic CRUD operations
+- Business logic validation
+- Error handling (404, 400, 409 status codes)
+- Reservation status management
 
 ## 📦 Libraries and Packages
 
@@ -564,10 +651,14 @@ export class ReservationService {
 
 ## 📝 Notes
 
-- The application currently uses in-memory storage for simplicity. In production, replace with a persistent database.
-- User authentication is simplified (hardcoded userId). In production, implement proper authentication (JWT, OAuth, etc.).
-- The frontend port (3001) can be changed in `frontend/package.json`.
-- The backend port (3000) can be changed via `PORT` environment variable or in `main.ts`.
+- **Storage**: The application currently uses in-memory storage for simplicity. In production, replace with a persistent database (PostgreSQL, MongoDB, etc.).
+- **Authentication**: User authentication is simplified (hardcoded userId: 'test user' for user mode, localStorage for mode switching). In production, implement proper authentication (JWT, OAuth, etc.).
+- **Reservation Status**: Reservations use a status field ('reserve' or 'cancel') instead of hard deletion. This allows for history tracking and analytics.
+- **Ports**: 
+  - Frontend port (3001) can be changed in `frontend/package.json`
+  - Backend port (3000) can be changed via `PORT` environment variable or in `main.ts`
+- **Mode Switching**: Users can switch between admin and user mode via the sidebar. Mode preference is stored in localStorage.
+- **History Page**: The history page (`/history`) is accessible to admin users and displays all reservations with status information in a table format.
 
 ## 👤 Author
 
