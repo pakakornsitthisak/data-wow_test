@@ -18,19 +18,20 @@ A full-stack application for managing concert ticket reservations, built with Ne
 ## 🎯 Features
 
 ### User Features
-- View all concerts in a vertical card layout
+- View all concerts in a vertical card layout, sorted by creation date (newest first)
 - Reserve one seat per concert (1 user = 1 seat per concert)
 - Cancel reservations (changes status to 'cancel')
-- View reservation statistics (Total seats, Reserve count, Cancel count)
 - Switch between user and admin mode
 
 ### Admin Features
-- Create new concerts with name, description, and total seats
+- Create new concerts with name, description, and total seats via Create tab
+- Save button with icon for creating concerts
 - Delete concerts with confirmation dialog
 - View all user reservations in history page
 - View reservation statistics (Total seats, Reserve count, Cancel count)
-- Overview tab: View all concerts with delete functionality
-- Create tab: Form to create new concerts
+- Overview tab: View all concerts with delete functionality, sorted by creation date (newest first)
+- Create tab: Form to create new concerts with validation
+- Concerts displayed in descending order by creation date/time
 
 ### Technical Features
 - Responsive design (mobile, tablet, desktop)
@@ -92,7 +93,8 @@ data-wow_test/
 │   │       ├── reserve.svg
 │   │       ├── cancel.svg
 │   │       ├── trash.svg
-│   │       └── delete.svg
+│   │       ├── delete.svg
+│   │       └── save.svg
 │   └── package.json
 ├── backend/                 # NestJS backend application
 │   ├── src/
@@ -201,7 +203,6 @@ Reservations include a `status` field with two possible values:
 When a user cancels a reservation, the status changes to 'cancel' instead of deleting the record. This allows:
 - History tracking of all reservations
 - Analytics on cancellation rates
-- Audit trails
 - Statistics calculation (reserve count vs cancel count)
 
 #### Key Design Decisions
@@ -224,13 +225,16 @@ The frontend follows Next.js 13+ App Router patterns:
 
 #### Key Design Decisions
 - Type-safe API client with TypeScript
-- Component-based architecture with reusable components
+- Component-based architecture with reusable components (ConcertCard, CreateCard, Sidebar, etc.)
 - Responsive design with Tailwind CSS
 - Client-side state management with React hooks
 - Sidebar navigation with dynamic mode switching (admin/user)
 - Statistics dashboard for both admin and user views
 - Confirmation dialogs for destructive actions
 - Status-based filtering for reservations (reserve/cancel)
+- Concerts sorted by creation date in descending order (newest first)
+- Form validation for concert creation
+- Icon-based UI elements using SVG icons
 
 ## 📚 API Documentation
 
@@ -441,213 +445,7 @@ All tests pass and cover:
 
 ## 🚀 Bonus: Performance Optimization
 
-### Current Architecture Considerations
 
-The current implementation uses in-memory storage, which is suitable for development but not for production. Here are optimization strategies for handling intensive data and high traffic:
-
-### 1. Database Optimization
-
-**Recommendation**: Replace in-memory storage with a proper database (PostgreSQL, MySQL, or MongoDB).
-
-**Implementation**:
-- Use connection pooling
-- Implement database indexing on frequently queried fields (concertId, userId)
-- Use database-level constraints (unique constraints for user-concert pairs)
-- Consider read replicas for read-heavy operations
-
-### 2. Caching Strategy
-
-**Redis/Memcached**:
-- Cache concert listings (with TTL)
-- Cache reservation counts per concert
-- Cache user reservations
-- Invalidate cache on create/update/delete operations
-
-### 3. API Optimization
-
-**Pagination**:
-- Implement pagination for concert listings and reservations
-- Use cursor-based pagination for better performance
-
-**Data Aggregation**:
-- Pre-calculate reservation counts at the database level
-- Use database views or materialized views for complex queries
-
-### 4. Frontend Optimization
-
-**Next.js Features**:
-- Use Server-Side Rendering (SSR) or Static Site Generation (SSG) for concert listings
-- Implement Incremental Static Regeneration (ISR) for frequently accessed pages
-- Use React Server Components where appropriate
-
-**Code Splitting**:
-- Lazy load admin dashboard (not needed for regular users)
-- Implement route-based code splitting
-
-**Caching**:
-- Use SWR or React Query for client-side data caching
-- Implement optimistic updates for better UX
-
-### 5. Infrastructure
-
-**Load Balancing**:
-- Use multiple backend instances behind a load balancer
-- Implement session affinity if using session-based auth
-
-**CDN**:
-- Serve static assets through a CDN
-- Cache API responses at CDN level where appropriate
-
-**Database Sharding**:
-- For extremely large datasets, consider sharding by concert ID or user ID
-
-## 🎫 Bonus: Concurrent Reservation Handling
-
-To ensure that no one needs to stand up during the show (no overbooking), we need to handle concurrent reservation requests properly. Here's the strategy:
-
-### Problem Statement
-When multiple users try to reserve the last available seat simultaneously, we need to ensure:
-1. Only one reservation succeeds
-2. No overbooking occurs
-3. Fair allocation (first-come-first-served or queue-based)
-
-### Solutions
-
-### 1. Database-Level Locking (Recommended)
-
-**Pessimistic Locking**:
-```typescript
-// Using database transactions with row-level locks
-@Transaction()
-async createReservation(dto: CreateReservationDto) {
-  // Lock the concert row for update
-  const concert = await this.concertRepository.findOne({
-    where: { id: dto.concertId },
-    lock: { mode: 'pessimistic_write' }
-  });
-  
-  // Check availability and create reservation
-  // The lock ensures only one transaction can proceed at a time
-}
-```
-
-**Optimistic Locking**:
-```typescript
-// Add version field to Concert entity
-// Use version field to detect concurrent modifications
-```
-
-### 2. Application-Level Locking
-
-**Distributed Lock (Redis)**:
-```typescript
-async createReservation(dto: CreateReservationDto) {
-  const lockKey = `concert:${dto.concertId}:reserve`;
-  const lock = await this.redisService.acquireLock(lockKey, 5000); // 5 second timeout
-  
-  try {
-    // Check availability and create reservation
-  } finally {
-    await this.redisService.releaseLock(lock);
-  }
-}
-```
-
-### 3. Database Constraints
-
-**Unique Constraint**:
-```sql
--- Ensure one reservation per user per concert
-ALTER TABLE reservations 
-ADD CONSTRAINT unique_user_concert 
-UNIQUE (userId, concertId);
-```
-
-**Check Constraint**:
-```sql
--- Ensure reservation count doesn't exceed seats
--- Implemented at application level with transactions
-```
-
-### 4. Queue-Based System
-
-**Message Queue (RabbitMQ/Redis Queue)**:
-- Place reservation requests in a queue
-- Process sequentially to avoid race conditions
-- Notify users when reservation is confirmed
-- Handle timeout for stale requests
-
-### 5. Recommended Implementation
-
-For this application, I recommend:
-
-1. **Database Transactions** with **Row-Level Locks**:
-   - Use database transactions with `SELECT FOR UPDATE`
-   - Atomic reservation creation
-   - Rollback on errors
-
-2. **Distributed Lock** (for distributed systems):
-   - Use Redis for distributed locks
-   - Prevent concurrent reservations for the same concert
-   - Set reasonable timeout to prevent deadlocks
-
-3. **Retry Logic** (Client-side):
-   - If reservation fails due to concurrent conflict, retry with exponential backoff
-   - Show appropriate error message to user
-
-4. **Real-time Updates**:
-   - Use WebSockets or Server-Sent Events to update seat availability in real-time
-   - Prevent users from attempting to reserve already-taken seats
-
-### Example Implementation (with TypeORM)
-
-```typescript
-@Injectable()
-export class ReservationService {
-  async createReservation(dto: CreateReservationDto) {
-    return await this.dataSource.transaction(async (manager) => {
-      // Lock the concert row
-      const concert = await manager.findOne(Concert, {
-        where: { id: dto.concertId },
-        lock: { mode: 'pessimistic_write' }
-      });
-
-      if (!concert) {
-        throw new NotFoundException('Concert not found');
-      }
-
-      // Count existing reservations (within transaction)
-      const count = await manager.count(Reservation, {
-        where: { concertId: dto.concertId }
-      });
-
-      if (count >= concert.seat) {
-        throw new BadRequestException('No seats available');
-      }
-
-      // Check for existing user reservation
-      const existing = await manager.findOne(Reservation, {
-        where: { userId: dto.userId, concertId: dto.concertId }
-      });
-
-      if (existing) {
-        throw new ConflictException('User already has a reservation');
-      }
-
-      // Create reservation
-      const reservation = manager.create(Reservation, dto);
-      return await manager.save(reservation);
-    });
-  }
-}
-```
-
-### Monitoring and Alerts
-
-- Monitor failed reservation attempts due to concurrency
-- Alert if reservation failure rate is high
-- Track reservation processing time
-- Monitor database lock wait times
 
 ## 📝 Notes
 
@@ -659,6 +457,8 @@ export class ReservationService {
   - Backend port (3000) can be changed via `PORT` environment variable or in `main.ts`
 - **Mode Switching**: Users can switch between admin and user mode via the sidebar. Mode preference is stored in localStorage.
 - **History Page**: The history page (`/history`) is accessible to admin users and displays all reservations with status information in a table format.
+- **Concert Sorting**: Both admin and user pages display concerts sorted by creation date/time in descending order (newest first).
+- **Create Concert Form**: The Create tab in admin view includes form validation and saves new concerts with all required fields (name, description, seat count). The Save button includes an icon and handles form submission to create concerts via the API.
 
 ## 👤 Author
 
