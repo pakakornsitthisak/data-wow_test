@@ -88,7 +88,7 @@ export default function AdminPage() {
       <main className="flex-1 overflow-hidden flex flex-col">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col overflow-hidden w-full h-full">
           {/* Statistics Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 flex-shrink-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 shrink-0">
             {/* Total of seats */}
             <div className="bg-[#0070a4] rounded-lg p-6 text-white flex flex-col items-center justify-center w-full">
               <div className="mb-3">
@@ -138,7 +138,7 @@ export default function AdminPage() {
           {/* Section 2 - Navigation and Content */}
           <div className="flex flex-col flex-1 overflow-hidden min-h-0">
             {/* Navigation Bar - Fixed */}
-            <div className="flex-shrink-0 bg-gray-50 z-10 pb-4 border-b border-gray-200">
+            <div className="shrink-0 bg-gray-50 z-10 pb-4 border-b border-gray-200">
               <div className="flex space-x-4">
                 <button
                   onClick={() => setActiveTab('Overview')}

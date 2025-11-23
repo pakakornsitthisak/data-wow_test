@@ -54,7 +54,7 @@ function Sidebar() {
         </h1>
       </div>
       <nav className="flex-1 p-4 flex flex-col min-h-0">
-        <ul className="space-y-2 flex-shrink-0">
+        <ul className="space-y-2 shrink-0">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             
@@ -116,7 +116,7 @@ function Sidebar() {
             );
           })}
         </ul>
-        <div className="mt-auto pt-4 pb-4 border-t border-gray-200 flex-shrink-0">
+        <div className="mt-auto pt-4 pb-4 border-t border-gray-200 shrink-0">
           <button
             onClick={() => {
               // Handle logout logic here
@@ -124,7 +124,7 @@ function Sidebar() {
             }}
             className="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors w-full text-gray-700 hover:bg-gray-100 text-left"
           >
-            <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+            <div className="w-5 h-5 flex items-center justify-center shrink-0">
               <Image
                 src="/svg/log_out.svg"
                 alt="Log out"
