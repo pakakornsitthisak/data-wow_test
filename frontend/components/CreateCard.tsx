@@ -3,10 +3,58 @@
 import { useState } from 'react';
 import Image from 'next/image';
 
-export default function CreateCard() {
+interface CreateCardProps {
+  onCreate?: (data: { name: string; description: string; seat: number }) => Promise<void>;
+  onSuccess?: () => void;
+}
+
+export default function CreateCard({ onCreate, onSuccess }: CreateCardProps) {
   const [concertName, setConcertName] = useState('');
   const [totalSeats, setTotalSeats] = useState('');
   const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!concertName.trim() || !totalSeats || !description.trim()) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    const seatNumber = parseInt(totalSeats, 10);
+    if (isNaN(seatNumber) || seatNumber < 1) {
+      setError('Please enter a valid number of seats (at least 1)');
+      return;
+    }
+
+    if (!onCreate) {
+      setError('Create handler not provided');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      await onCreate({
+        name: concertName.trim(),
+        description: description.trim(),
+        seat: seatNumber,
+      });
+      
+      // Reset form on success
+      setConcertName('');
+      setTotalSeats('');
+      setDescription('');
+      
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create concert');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 w-full shadow-sm">
@@ -76,11 +124,23 @@ export default function CreateCard() {
 
       {/* Section 4: Save Button */}
       <div className="px-6 pb-6 flex justify-end">
+        {error && (
+          <div className="mr-4 text-red-600 text-sm flex items-center">{error}</div>
+        )}
         <button
           type="button"
-          className="bg-[#1690e9] text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
+          onClick={handleSave}
+          disabled={loading || !concertName.trim() || !totalSeats || !description.trim()}
+          className="flex items-center space-x-2 bg-[#1690e9] text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
-          Save
+          <Image
+            src="/svg/save.svg"
+            alt="Save"
+            width={16}
+            height={16}
+            className="w-4 h-4"
+          />
+          <span>{loading ? 'Saving...' : 'Save'}</span>
         </button>
       </div>
     </div>

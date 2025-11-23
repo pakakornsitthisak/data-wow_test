@@ -29,7 +29,15 @@ export default function UserHome() {
         api.getReservations(userId),
         api.getReservations(), // Get all reservations for counts
       ]);
-      setConcerts(concertsData);
+      
+      // Sort concerts by createdAt in descending order (newest first)
+      const sortedConcerts = [...concertsData].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA; // Descending order
+      });
+      
+      setConcerts(sortedConcerts);
       setUserReservations(userReservationsData);
       setAllReservations(allReservationsData);
     } catch (err) {

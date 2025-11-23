@@ -31,7 +31,15 @@ export default function AdminPage() {
         api.getConcerts(),
         api.getReservations(),
       ]);
-      setConcerts(concertsData);
+      
+      // Sort concerts by createdAt in descending order (newest first)
+      const sortedConcerts = [...concertsData].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA; // Descending order
+      });
+      
+      setConcerts(sortedConcerts);
       setReservations(reservationsData);
     } catch (err) {
       setError(err as ApiError | Error);
@@ -65,6 +73,18 @@ export default function AdminPage() {
   const confirmDelete = () => {
     if (concertToDelete) {
       handleDeleteConcert(concertToDelete.id);
+    }
+  };
+
+  const handleCreateConcert = async (data: { name: string; description: string; seat: number }) => {
+    try {
+      setError(null);
+      await api.createConcert(data);
+      await loadData();
+      // Optionally switch to Overview tab after creation
+      setActiveTab('Overview');
+    } catch (err) {
+      throw err; // Re-throw to let CreateCard handle the error
     }
   };
 
@@ -194,7 +214,7 @@ export default function AdminPage() {
 
             {activeTab === 'Create' && (
               <div className="overflow-y-auto flex-1 min-h-0 mt-6 pr-2">
-                <CreateCard />
+                <CreateCard onCreate={handleCreateConcert} />
               </div>
             )}
           </div>
