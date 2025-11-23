@@ -59,10 +59,8 @@ let ReservationService = class ReservationService {
             throw new common_1.BadRequestException('Reservation is already cancelled');
         }
         const index = this.reservations.findIndex((r) => r.id === reservationId);
-        if (index !== -1) {
-            this.reservations[index].status = reservation_entity_1.ReservationStatus.CANCEL;
-            this.reservations[index].updatedAt = new Date();
-        }
+        this.reservations[index].status = reservation_entity_1.ReservationStatus.CANCEL;
+        this.reservations[index].updatedAt = new Date();
     }
     getAllReservations() {
         return this.reservations;

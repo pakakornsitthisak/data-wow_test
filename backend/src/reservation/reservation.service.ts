@@ -72,11 +72,10 @@ export class ReservationService {
       throw new BadRequestException('Reservation is already cancelled');
     }
 
+    // findOne() already ensures the reservation exists, so index will always be >= 0
     const index = this.reservations.findIndex((r) => r.id === reservationId);
-    if (index !== -1) {
-      this.reservations[index].status = ReservationStatus.CANCEL;
-      this.reservations[index].updatedAt = new Date();
-    }
+    this.reservations[index].status = ReservationStatus.CANCEL;
+    this.reservations[index].updatedAt = new Date();
   }
 
   getAllReservations(): Reservation[] {

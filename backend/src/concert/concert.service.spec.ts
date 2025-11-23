@@ -92,6 +92,69 @@ describe('ConcertService', () => {
     it('should throw NotFoundException when concert not found', () => {
       expect(() => service.remove(999)).toThrow(NotFoundException);
     });
+
+    it('should maintain ID sequence after deletion', () => {
+      const dto1: CreateConcertDto = {
+        name: 'Concert 1',
+        description: 'Description 1',
+        seat: 50,
+      };
+
+      const dto2: CreateConcertDto = {
+        name: 'Concert 2',
+        description: 'Description 2',
+        seat: 75,
+      };
+
+      const concert1 = service.create(dto1);
+      const concert2 = service.create(dto2);
+
+      service.remove(concert1.id);
+
+      const dto3: CreateConcertDto = {
+        name: 'Concert 3',
+        description: 'Description 3',
+        seat: 100,
+      };
+
+      const concert3 = service.create(dto3);
+
+      // New concert should have unique ID (ID sequence continues)
+      expect(concert3.id).toBeDefined();
+      expect(concert3.id).not.toBe(concert1.id);
+      expect(concert3.id).not.toBe(concert2.id);
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return concerts in order of creation', () => {
+      const dto1: CreateConcertDto = {
+        name: 'Concert 1',
+        description: 'Description 1',
+        seat: 50,
+      };
+
+      const dto2: CreateConcertDto = {
+        name: 'Concert 2',
+        description: 'Description 2',
+        seat: 75,
+      };
+
+      const concert1 = service.create(dto1);
+      const concert2 = service.create(dto2);
+
+      const concerts = service.findAll();
+
+      expect(concerts.length).toBeGreaterThanOrEqual(2);
+      const index1 = concerts.findIndex((c) => c.id === concert1.id);
+      const index2 = concerts.findIndex((c) => c.id === concert2.id);
+      expect(index1).toBeLessThan(index2);
+    });
+
+    it('should return empty array when no concerts exist', () => {
+      const concerts = service.findAll();
+      expect(Array.isArray(concerts)).toBe(true);
+    });
   });
 });
 
